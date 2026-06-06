@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>بطاقات جوجل شيت | مواد + مراجعة الأخطاء + انتقال تلقائي</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Cairo', system-ui, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(145deg, #132e2c, #0a1f1e);
+            min-height: 100vh;
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .master-container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(255,248,235,0.96);
+            border-radius: 2.5rem;
+            box-shadow: 0 30px 40px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        .dashboard {
+            background: #1f423b;
+            padding: 1rem 1.5rem;
+            color: #fef0cf;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border-bottom: 3px solid #f3a257;
+        }
+        .stats {
+            display: flex;
+            gap: 1rem;
+            background: #0e2a25;
+            padding: 0.4rem 1rem;
+            border-radius: 60px;
+        }
+        .stats span { font-weight: bold; }
+        .correct-count { color: #a3e0a0; }
+        .wrong-count { color: #f6a58c; }
+
+        .controls {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        select, button {
+            background: #f3e1b3;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .icon-btn { background: #f3a257; color: #1f2a1e; }
+        .action-btn {
+            background: #2c6b5a;
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        .quiz-core { padding: 1.8rem; }
+        .question-panel {
+            background: #fffef7;
+            border-radius: 2rem;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        .question-text { font-size: 1.7rem; font-weight: 700; color: #1f423b; }
+        .counter-badge {
+            background: #e7dbbc;
+            display: inline-block;
+            padding: 0.2rem 1.2rem;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            margin-top: 0.8rem;
+        }
+        .options-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .opt-btn {
+            background: #f2ecdf;
+            border: 2px solid #cfbc93;
+            border-radius: 2rem;
+            padding: 0.9rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .opt-btn:hover:not(:disabled) { background: #ffe1a0; transform: translateY(-2px); }
+        .opt-btn:disabled { opacity: 0.7; cursor: default; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px); }
+            10% { transform: translate(-1px, -2px); }
+            20% { transform: translate(-3px, 0px); }
+            30% { transform: translate(3px, 2px); }
+            40% { transform: translate(1px, -1px); }
+            50% { transform: translate(-1px, 2px); }
+            60% { transform: translate(-3px, 1px); }
+            70% { transform: translate(3px, 1px); }
+            80% { transform: translate(-1px, -1px); }
+            90% { transform: translate(1px, 2px); }
+            100% { transform: translate(1px, -2px); }
+        }
+        .shake-effect { animation: shake 0.5s ease-in-out; }
+        .feedback-timer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #e9e2cf;
+            border-radius: 3rem;
+            padding: 0.6rem 1.2rem;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+        }
+        .timer-box {
+            background: #1f2e29;
+            color: #ffde9c;
+            padding: 0.3rem 1rem;
+            border-radius: 3rem;
+            font-family: monospace;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        .action-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            justify-content: center;
+            margin-top: 0.5rem;
+        }
+        .highlight-correct { background: #b3e0b0 !important; border-color: #2a7a3a; }
+        .highlight-wrong { background: #f3bfb3 !important; }
+        footer {
+            background: #dcd2bc;
+            text-align: center;
+            padding: 0.8rem;
+            font-size: 0.7rem;
+        }
+        @media (max-width: 650px) {
+            .question-text { font-size: 1.2rem; }
+            .options-area { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="master-container">
+    <div class="dashboard">
+        <div class="stats">
+            <div>✅ صحيح: <span class="correct-count" id="correctCount">0</span></div>
+            <div>❌ خطأ: <span class="wrong-count" id="wrongCount">0</span></div>
+        </div>
+        <div class="controls">
+            <select id="subjectSelect"></select>
+            <button id="reviewWrongBtn" class="icon-btn">📘 مراجعة الأخطاء</button>
+            <button id="resetWrongBtn" class="icon-btn">🗑️ إعادة تعيين الأخطاء</button>
+            <button id="shuffleBtn" class="icon-btn">🎲 خلط عشوائي</button>
+        </div>
+    </div>
+
+    <div class="quiz-core">
+        <div class="question-panel">
+            <div class="question-text" id="questionText">⏳ جاري تحميل البيانات...</div>
+            <div class="counter-badge" id="cardCounter"></div>
+        </div>
+        <div class="options-area" id="optionsContainer"></div>
+        <div class="feedback-timer">
+            <div class="feedback-msg" id="feedbackMsg">✨ اختر الإجابة</div>
+            <div class="timer-box" id="timerDisplay">⏱️ التالي تلقائياً بعد 3 ثوانٍ</div>
+        </div>
+        <div class="action-bar">
+            <button id="prevBtn" class="action-btn">◀ السابق</button>
+            <button id="nextBtn" class="action-btn">التالي ▶</button>
+            <button id="toggleAutoBtn" class="action-btn">⏸️ إيقاف الانتقال التلقائي</button>
+            <button id="resetSessionBtn" class="action-btn" style="background:#b44a2c;">🔄 إعادة تعيين الجلسة</button>
+        </div>
+    </div>
+    <footer>♾️ حلقة لا نهائية | مراجعة الأخطاء | اختيار المادة | ترتيب عشوائي | انتقال تلقائي 3 ثوانٍ</footer>
+</div>
+
+<script>
+    // ------------------- رابط Google Sheets المدمج -------------------
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJeg6y0o8oNWqwEpy44Fgw8kK69xefhLxLtE0dYR0QHkJJA2agB83krKIpkGy80els2Vf-Jn5OzsEI/pub?output=csv";
+    
+    let allCards = [];            // كل البطاقات من CSV
+    let currentDeck = [];         // البطاقات بعد فلترة المادة
+    let currentCardsList = [];     // البطاقات المعروضة (مراعاة الخلط ومراجعة الأخطاء)
+    let currentCardIndex = 0;
+    let sessionCorrect = 0, sessionWrong = 0;
+    let answered = false;
+    let currentCardData = null;
+    let currentShuffledOptions = [];
+    let shuffleMode = true;
+    let autoTransition = true;
+    let autoTimer = null;
+    let reviewMode = false;        // وضع مراجعة الأخطاء
+    
+    // تخزين أخطاء الجلسة (معرفات البطاقات التي تمت إجابتها خطأ)
+    let wrongSessionIds = new Set();
+    
+    // المواد الفريدة
+    let subjects = [];
+    let currentSubject = "الكل";
+    
+    // عناصر DOM
+    const questionTextEl = document.getElementById('questionText');
+    const cardCounterEl = document.getElementById('cardCounter');
+    const optionsContainer = document.getElementById('optionsContainer');
+    const feedbackMsgDiv = document.getElementById('feedbackMsg');
+    const correctCountSpan = document.getElementById('correctCount');
+    const wrongCountSpan = document.getElementById('wrongCount');
+    const subjectSelect = document.getElementById('subjectSelect');
+    const reviewWrongBtn = document.getElementById('reviewWrongBtn');
+    const resetWrongBtn = document.getElementById('resetWrongBtn');
+    const shuffleBtn = document.getElementById('shuffleBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const toggleAutoBtn = document.getElementById('toggleAutoBtn');
+    const resetSessionBtn = document.getElementById('resetSessionBtn');
+    
+    // ------------------- وظائف مساعدة -------------------
+    function updateStatsUI() {
+        correctCountSpan.textContent = sessionCorrect;
+        wrongCountSpan.textContent = sessionWrong;
+    }
+    
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+    
+    // بناء قائمة المواد من البطاقات
+    function extractSubjects() {
+        const subjectsSet = new Set();
+        subjectsSet.add("الكل");
+        allCards.forEach(card => {
+            if(card.subject && card.subject.trim() !== "")
+                subjectsSet.add(card.subject);
+        });
+        subjects = Array.from(subjectsSet);
+        subjectSelect.innerHTML = '';
+        subjects.forEach(sub => {
+            const option = document.createElement('option');
+            option.value = sub;
+            option.textContent = sub;
+            subjectSelect.appendChild(option);
+        });
+        subjectSelect.value = currentSubject;
+    }
+    
+    // فلترة البطاقات حسب المادة المختارة
+    function filterBySubject() {
+        if(currentSubject === "الكل") {
+            currentDeck = [...allCards];
+        } else {
+            currentDeck = allCards.filter(card => card.subject === currentSubject);
+        }
+        // إعادة بناء القائمة المعروضة بعد تغيير المادة
+        rebuildCurrentList();
+    }
+    
+    // بناء قائمة التشغيل الحالية (مراعاة الخلط، مراجعة الأخطاء، والمادة)
+    function rebuildCurrentList() {
+        if(currentDeck.length === 0) {
+            currentCardsList = [];
+            currentCardIndex = 0;
+            renderCurrentCard();
+            return;
+        }
+        let base = [...currentDeck];
+        if(reviewMode) {
+            base = base.filter(card => wrongSessionIds.has(card.id));
+            if(base.length === 0) {
+                // إذا لم تكن هناك أخطاء، نخرج من وضع المراجعة
+                reviewMode = false;
+                base = [...currentDeck];
+                feedbackMsgDiv.innerHTML = "📘 لا توجد أخطاء في هذه المادة، تم الخروج من مراجعة الأخطاء.";
+            }
+        }
+        currentCardsList = shuffleMode ? shuffleArray(base) : [...base];
+        if(currentCardsList.length === 0) {
+            currentCardsList = [...currentDeck];
+        }
+        currentCardIndex = 0;
+        renderCurrentCard();
+    }
+    
+    // تحديث عند تغيير المادة
+    function changeSubject() {
+        currentSubject = subjectSelect.value;
+        reviewMode = false;  // الخروج من مراجعة الأخطاء عند تغيير المادة
+        filterBySubject();
+    }
+    
+    // تفعيل مراجعة الأخطاء
+    function activateReviewWrong() {
+        if(currentDeck.length === 0) return;
+        if(wrongSessionIds.size === 0) {
+            feedbackMsgDiv.innerHTML = "⚠️ لا توجد أسئلة خاطئة في الجلسة الحالية لهذه المادة.";
+            return;
+        }
+        reviewMode = true;
+        rebuildCurrentList();
+        feedbackMsgDiv.innerHTML = "📘 وضع مراجعة الأخطاء: يتم عرض الأسئلة التي أجبت عليها خطأ فقط.";
+    }
+    
+    // إعادة تعيين الأخطاء (مسح سجل الأخطاء في الجلسة)
+    function resetWrongAnswers() {
+        wrongSessionIds.clear();
+        if(reviewMode) {
+            reviewMode = false;
+            rebuildCurrentList();
+        }
+        feedbackMsgDiv.innerHTML = "🗑️ تم مسح سجل الأخطاء في هذه الجلسة.";
+    }
+    
+    // إعادة تعيين الجلسة (النقاط والأخطاء)
+    function resetSession() {
+        sessionCorrect = 0;
+        sessionWrong = 0;
+        wrongSessionIds.clear();
+        reviewMode = false;
+        updateStatsUI();
+        rebuildCurrentList();
+        feedbackMsgDiv.innerHTML = "✨ تم إعادة تعيين الإحصائيات والأخطاء.";
+        if(autoTimer) clearTimeout(autoTimer);
+        autoTimer = null;
+    }
+    
+    // الانتقال إلى السؤال التالي
+    function nextCard() {
+        if(currentCardsList.length === 0) return;
+        if(autoTimer) clearTimeout(autoTimer);
+        autoTimer = null;
+        let newIdx = currentCardIndex + 1;
+        if(newIdx >= currentCardsList.length) newIdx = 0;
+        currentCardIndex = newIdx;
+        answered = false;
+        renderCurrentCard();
+    }
+    
+    function prevCard() {
+        if(currentCardsList.length === 0) return;
+        if(autoTimer) clearTimeout(autoTimer);
+        autoTimer = null;
+        let newIdx = currentCardIndex - 1;
+        if(newIdx < 0) newIdx = currentCardsList.length - 1;
+        currentCardIndex = newIdx;
+        answered = false;
+        renderCurrentCard();
+    }
+    
+    // بدء الانتقال التلقائي بعد الإجابة
+    function startAutoTransition() {
+        if(!autoTransition) return;
+        if(autoTimer) clearTimeout(autoTimer);
+        autoTimer = setTimeout(() => {
+            nextCard();
+            autoTimer = null;
+        }, 3000);
+    }
+    
+    // عرض البطاقة الحالية
+    function renderCurrentCard() {
+        if(currentCardsList.length === 0 || !currentCardsList[currentCardIndex]) {
+            questionTextEl.textContent = "لا توجد بطاقات متاحة. حاول تغيير المادة أو إضافة أسئلة.";
+            optionsContainer.innerHTML = '';
+            cardCounterEl.textContent = '';
+            return;
+        }
+        currentCardData = currentCardsList[currentCardIndex];
+        questionTextEl.textContent = currentCardData.question;
+        cardCounterEl.textContent = `البطاقة ${currentCardIndex+1} / ${currentCardsList.length} (${currentSubject}) ${shuffleMode ? '🔀' : ''}`;
+        
+        // توليد الخيارات
+        let opts = [currentCardData.correct, ...currentCardData.options];
+        opts = [...new Set(opts)];
+        while(opts.length < 4) opts.push("خيار إضافي");
+        currentShuffledOptions = shuffleArray(opts.slice(0,4));
+        renderOptionsButtons();
+        answered = false;
+        enableOptions(true);
+        feedbackMsgDiv.innerHTML = "✨ اختر الإجابة";
+    }
+    
+    function renderOptionsButtons() {
+        optionsContainer.innerHTML = '';
+        currentShuffledOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.textContent = opt;
+            btn.addEventListener('click', () => {
+                if(answered) {
+                    feedbackMsgDiv.innerHTML = "⚠️ لقد أجبت على هذه البطاقة بالفعل!";
+                    return;
+                }
+                handleAnswer(opt);
+            });
+            optionsContainer.appendChild(btn);
+        });
+    }
+    
+    function triggerShakeEffect() {
+        const questionPanel = document.querySelector('.question-panel');
+        questionPanel.classList.add('shake-effect');
+        setTimeout(() => {
+            questionPanel.classList.remove('shake-effect');
+        }, 500);
+    }
+    
+    function handleAnswer(selected) {
+        if(answered) return;
+        answered = true;
+        
+        const isCorrect = (selected === currentCardData.correct);
+        
+        if(isCorrect) {
+            sessionCorrect++;
+            feedbackMsgDiv.innerHTML = `✅ صحيح! "${selected}" إجابة ممتازة 🎉`;
+            playSound('correct');
+            // إذا كانت البطاقة في قائمة الأخطاء، نزيلها منها
+            if(wrongSessionIds.has(currentCardData.id)) {
+                wrongSessionIds.delete(currentCardData.id);
+                // إذا كنا في وضع مراجعة الأخطاء، قد تحتاج القائمة للتحديث
+                if(reviewMode) {
+                    rebuildCurrentList();
+                }
+            }
+        } else {
+            sessionWrong++;
+            wrongSessionIds.add(currentCardData.id);
+            feedbackMsgDiv.innerHTML = `❌ خطأ! الإجابة الصحيحة: "${currentCardData.correct}".`;
+            playSound('wrong');
+            triggerShakeEffect();
+        }
+        
+        updateStatsUI();
+        highlightAnswerButtons(selected, isCorrect);
+        enableOptions(false);
+        
+        // بدء الانتقال التلقائي
+        startAutoTransition();
+    }
+    
+    function highlightAnswerButtons(selected, wasCorrect) {
+        const btns = document.querySelectorAll('.opt-btn');
+        btns.forEach(btn => {
+            if(btn.textContent === selected) {
+                btn.classList.add(wasCorrect ? 'highlight-correct' : 'highlight-wrong');
+            }
+            if(btn.textContent === currentCardData.correct && !wasCorrect) {
+                btn.classList.add('highlight-correct');
+            }
+        });
+    }
+    
+    function enableOptions(enable) {
+        const btns = document.querySelectorAll('.opt-btn');
+        btns.forEach(btn => {
+            if(enable) {
+                btn.disabled = false;
+                btn.classList.remove('highlight-correct', 'highlight-wrong');
+            } else {
+                btn.disabled = true;
+            }
+        });
+    }
+    
+    function playSound(type) {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = type === 'correct' ? 880 : 440;
+            gain.gain.value = 0.2;
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+            osc.stop(audioCtx.currentTime + 0.4);
+        } catch(e) {}
+    }
+    
+    function toggleAutoTransition() {
+        autoTransition = !autoTransition;
+        toggleAutoBtn.textContent = autoTransition ? "⏸️ إيقاف الانتقال التلقائي" : "▶️ تفعيل الانتقال التلقائي";
+        feedbackMsgDiv.innerHTML = autoTransition ? "🔄 تم تفعيل الانتقال التلقائي (3 ثوانٍ)" : "⏸️ تم إيقاف الانتقال التلقائي";
+        if(!autoTransition && autoTimer) {
+            clearTimeout(autoTimer);
+            autoTimer = null;
+        }
+    }
+    
+    // تحميل البيانات من Google Sheets
+    async function loadFromSheetUrl(url) {
+        try {
+            questionTextEl.textContent = "⏳ جاري تحميل البيانات من جوجل شيت...";
+            const response = await fetch(url);
+            const csvText = await response.text();
+            parseCSV(csvText);
+        } catch(e) {
+            alert("خطأ في التحميل: " + e.message);
+            questionTextEl.textContent = "فشل التحميل. تأكد من الرابط.";
+        }
+    }
+    
+    function parseCSV(csv) {
+        const lines = csv.split(/\r?\n/);
+        if(lines.length < 2) {
+            alert("الملف فارغ أو لا يحتوي على بيانات");
+            return;
+        }
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const idxQuestion = headers.indexOf('question');
+        const idxCorrect = headers.indexOf('correct');
+        const idxSubject = headers.indexOf('subject');
+        // البحث عن أعمدة الخيارات
+        const idxOpts = [];
+        for(let i=1; i<=3; i++) {
+            let optName = `option${i}`;
+            let idx = headers.indexOf(optName);
+            if(idx !== -1) idxOpts.push(idx);
+        }
+        if(idxQuestion === -1 || idxCorrect === -1) {
+            alert("يجب وجود أعمدة: 'question', 'correct' ويفضل 'subject', 'option1/2/3'");
+            return;
+        }
+        const newCards = [];
+        for(let i=1; i<lines.length; i++) {
+            if(!lines[i].trim()) continue;
+            const parts = lines[i].split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+            if(parts.length <= idxQuestion || parts[idxQuestion] === "") continue;
+            let opts = [];
+            for(let idx of idxOpts) {
+                if(parts[idx] && parts[idx] !== "") opts.push(parts[idx]);
+            }
+            while(opts.length < 3) opts.push("خيار إضافي");
+            const subject = (idxSubject !== -1 && parts[idxSubject]) ? parts[idxSubject] : "عام";
+            newCards.push({
+                id: `card_${i}_${Date.now()}_${Math.random()}`,
+                question: parts[idxQuestion],
+                correct: parts[idxCorrect],
+                options: opts.slice(0,3),
+                subject: subject
+            });
+        }
+        if(newCards.length === 0) {
+            alert("لم يتم العثور على بطاقات صالحة.");
+            return;
+        }
+        allCards = newCards;
+        extractSubjects();
+        currentSubject = "الكل";
+        subjectSelect.value = "الكل";
+        filterBySubject();
+        // إعادة ضبط الجلسة
+        sessionCorrect = 0;
+        sessionWrong = 0;
+        wrongSessionIds.clear();
+        reviewMode = false;
+        updateStatsUI();
+        feedbackMsgDiv.innerHTML = `✅ تم تحميل ${allCards.length} بطاقة من ${subjects.length-1} مادة (ترتيب عشوائي تلقائي)`;
+    }
+    
+    // ربط الأحداث
+    subjectSelect.addEventListener('change', changeSubject);
+    reviewWrongBtn.addEventListener('click', activateReviewWrong);
+    resetWrongBtn.addEventListener('click', resetWrongAnswers);
+    shuffleBtn.addEventListener('click', () => {
+        shuffleMode = true;
+        rebuildCurrentList();
+        feedbackMsgDiv.innerHTML = "🎲 تم تفعيل الترتيب العشوائي";
+    });
+    prevBtn.addEventListener('click', prevCard);
+    nextBtn.addEventListener('click', nextCard);
+    toggleAutoBtn.addEventListener('click', toggleAutoTransition);
+    resetSessionBtn.addEventListener('click', resetSession);
+    
+    window.addEventListener('keydown', (e) => {
+        if(e.key === 'ArrowRight') { e.preventDefault(); nextCard(); }
+        if(e.key === 'ArrowLeft') { e.preventDefault(); prevCard(); }
+    });
+    
+    // بدء التطبيق
+    loadFromSheetUrl(SHEET_URL);
+</script>
+</body>
+</html>
