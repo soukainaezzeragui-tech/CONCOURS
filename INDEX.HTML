@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>بطاقات جوجل شيت | مواد + مراجعة الأخطاء + انتقال تلقائي</title>
@@ -607,7 +608,16 @@
         if(e.key === 'ArrowRight') { e.preventDefault(); nextCard(); }
         if(e.key === 'ArrowLeft') { e.preventDefault(); prevCard(); }
     });
-    
+    // تسجيل Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/CONCOURS/sw.js').then(reg => {
+      console.log('Service Worker مسجل بنجاح', reg);
+    }).catch(err => {
+      console.log('فشل تسجيل Service Worker', err);
+    });
+  });
+}
     // بدء التطبيق
     loadFromSheetUrl(SHEET_URL);
 </script>
