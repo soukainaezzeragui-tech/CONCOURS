@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>بطاقات جوجل شيت | مواد + مراجعة الأخطاء + انتقال تلقائي</title>
@@ -519,11 +519,13 @@
         }
     }
     
-    // تحميل البيانات من Google Sheets
+    // تحميل البيانات من Google Sheets باستخدام proxy لتجاوز CORS
     async function loadFromSheetUrl(url) {
         try {
             questionTextEl.textContent = "⏳ جاري تحميل البيانات من جوجل شيت...";
-            const response = await fetch(url);
+            // استخدام proxy آمن يضيف رؤوس CORS
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            const response = await fetch(proxyUrl);
             const csvText = await response.text();
             parseCSV(csvText);
         } catch(e) {
@@ -608,16 +610,18 @@
         if(e.key === 'ArrowRight') { e.preventDefault(); nextCard(); }
         if(e.key === 'ArrowLeft') { e.preventDefault(); prevCard(); }
     });
-    // تسجيل Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/CONCOURS/sw.js').then(reg => {
-      console.log('Service Worker مسجل بنجاح', reg);
-    }).catch(err => {
-      console.log('فشل تسجيل Service Worker', err);
-    });
-  });
-}
+    
+    // تسجيل Service Worker (بمسار نسبي ليتوافق مع GitHub Pages)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('Service Worker مسجل بنجاح', reg);
+            }).catch(err => {
+                console.log('فشل تسجيل Service Worker', err);
+            });
+        });
+    }
+    
     // بدء التطبيق
     loadFromSheetUrl(SHEET_URL);
 </script>
