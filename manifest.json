@@ -1,0 +1,22 @@
+{
+  "name": "CONCOURS - بطاقات تعليمية",
+  "short_name": "Concours",
+  "description": "تطبيق أسئلة وأجوبة مع Google Sheets ومراجعة الأخطاء",
+  "start_url": "/CONCOURS/index.html",
+  "display": "standalone",
+  "theme_color": "#1f423b",
+  "background_color": "#0a1f1e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
