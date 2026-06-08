@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <link rel="manifest" href="manifest.json">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>بطاقات جوجل شيت | مواد + مراجعة الأخطاء + انتقال تلقائي</title>
@@ -242,6 +241,31 @@
     const toggleAutoBtn = document.getElementById('toggleAutoBtn');
     const resetSessionBtn = document.getElementById('resetSessionBtn');
     
+    // ------------------- وظائف الحفظ والاسترجاع (Local Storage) -------------------
+    function saveToLocalStorage() {
+        localStorage.setItem('quiz_sessionCorrect', sessionCorrect);
+        localStorage.setItem('quiz_sessionWrong', sessionWrong);
+        localStorage.setItem('quiz_currentSubject', currentSubject);
+        localStorage.setItem('quiz_wrongSessionIds', JSON.stringify(Array.from(wrongSessionIds)));
+    }
+
+    function loadFromLocalStorage() {
+        if (localStorage.getItem('quiz_sessionCorrect') !== null) {
+            sessionCorrect = parseInt(localStorage.getItem('quiz_sessionCorrect'));
+        }
+        if (localStorage.getItem('quiz_sessionWrong') !== null) {
+            sessionWrong = parseInt(localStorage.getItem('quiz_sessionWrong'));
+        }
+        if (localStorage.getItem('quiz_currentSubject') !== null) {
+            currentSubject = localStorage.getItem('quiz_currentSubject');
+        }
+        if (localStorage.getItem('quiz_wrongSessionIds') !== null) {
+            const idsArray = JSON.parse(localStorage.getItem('quiz_wrongSessionIds'));
+            wrongSessionIds = new Set(idsArray);
+        }
+        updateStatsUI();
+    }
+
     // ------------------- وظائف مساعدة -------------------
     function updateStatsUI() {
         correctCountSpan.textContent = sessionCorrect;
@@ -272,7 +296,12 @@
             option.textContent = sub;
             subjectSelect.appendChild(option);
         });
-        subjectSelect.value = currentSubject;
+        if (subjects.includes(currentSubject)) {
+            subjectSelect.value = currentSubject;
+        } else {
+            currentSubject = "الكل";
+            subjectSelect.value = "الكل";
+        }
     }
     
     // فلترة البطاقات حسب المادة المختارة
@@ -282,11 +311,10 @@
         } else {
             currentDeck = allCards.filter(card => card.subject === currentSubject);
         }
-        // إعادة بناء القائمة المعروضة بعد تغيير المادة
         rebuildCurrentList();
     }
     
-    // بناء قائمة التشغيل الحالية (مراعاة الخلط، مراجعة الأخطاء، والمادة)
+    // بناء قائمة التشغيل الحالية
     function rebuildCurrentList() {
         if(currentDeck.length === 0) {
             currentCardsList = [];
@@ -298,7 +326,6 @@
         if(reviewMode) {
             base = base.filter(card => wrongSessionIds.has(card.id));
             if(base.length === 0) {
-                // إذا لم تكن هناك أخطاء، نخرج من وضع المراجعة
                 reviewMode = false;
                 base = [...currentDeck];
                 feedbackMsgDiv.innerHTML = "📘 لا توجد أخطاء في هذه المادة، تم الخروج من مراجعة الأخطاء.";
@@ -315,15 +342,17 @@
     // تحديث عند تغيير المادة
     function changeSubject() {
         currentSubject = subjectSelect.value;
-        reviewMode = false;  // الخروج من مراجعة الأخطاء عند تغيير المادة
+        reviewMode = false;
+        saveToLocalStorage();
         filterBySubject();
     }
     
     // تفعيل مراجعة الأخطاء
     function activateReviewWrong() {
         if(currentDeck.length === 0) return;
-        if(wrongSessionIds.size === 0) {
-            feedbackMsgDiv.innerHTML = "⚠️ لا توجد أسئلة خاطئة في الجلسة الحالية لهذه المادة.";
+        const currentDeckWrongCount = currentDeck.filter(card => wrongSessionIds.has(card.id)).length;
+        if(currentDeckWrongCount === 0) {
+            feedbackMsgDiv.innerHTML = "⚠️ لا توجد أسئلة خاطئة محفوظة حالياً لهذه المادة.";
             return;
         }
         reviewMode = true;
@@ -331,25 +360,27 @@
         feedbackMsgDiv.innerHTML = "📘 وضع مراجعة الأخطاء: يتم عرض الأسئلة التي أجبت عليها خطأ فقط.";
     }
     
-    // إعادة تعيين الأخطاء (مسح سجل الأخطاء في الجلسة)
+    // إعادة تعيين الأخطاء
     function resetWrongAnswers() {
         wrongSessionIds.clear();
+        saveToLocalStorage();
         if(reviewMode) {
             reviewMode = false;
             rebuildCurrentList();
         }
-        feedbackMsgDiv.innerHTML = "🗑️ تم مسح سجل الأخطاء في هذه الجلسة.";
+        feedbackMsgDiv.innerHTML = "🗑️ تم مسح سجل الأخطاء من جهازك.";
     }
     
-    // إعادة تعيين الجلسة (النقاط والأخطاء)
+    // إعادة تعيين الجلسة
     function resetSession() {
         sessionCorrect = 0;
         sessionWrong = 0;
         wrongSessionIds.clear();
         reviewMode = false;
         updateStatsUI();
+        saveToLocalStorage();
         rebuildCurrentList();
-        feedbackMsgDiv.innerHTML = "✨ تم إعادة تعيين الإحصائيات والأخطاء.";
+        feedbackMsgDiv.innerHTML = "✨ تم إعادة تعيين الإحصائيات والأخطاء بنجاح.";
         if(autoTimer) clearTimeout(autoTimer);
         autoTimer = null;
     }
@@ -377,7 +408,7 @@
         renderCurrentCard();
     }
     
-    // بدء الانتقال التلقائي بعد الإجابة
+    // بدء الانتقال التلقائي
     function startAutoTransition() {
         if(!autoTransition) return;
         if(autoTimer) clearTimeout(autoTimer);
@@ -399,7 +430,6 @@
         questionTextEl.textContent = currentCardData.question;
         cardCounterEl.textContent = `البطاقة ${currentCardIndex+1} / ${currentCardsList.length} (${currentSubject}) ${shuffleMode ? '🔀' : ''}`;
         
-        // توليد الخيارات
         let opts = [currentCardData.correct, ...currentCardData.options];
         opts = [...new Set(opts)];
         while(opts.length < 4) opts.push("خيار إضافي");
@@ -445,10 +475,8 @@
             sessionCorrect++;
             feedbackMsgDiv.innerHTML = `✅ صحيح! "${selected}" إجابة ممتازة 🎉`;
             playSound('correct');
-            // إذا كانت البطاقة في قائمة الأخطاء، نزيلها منها
             if(wrongSessionIds.has(currentCardData.id)) {
                 wrongSessionIds.delete(currentCardData.id);
-                // إذا كنا في وضع مراجعة الأخطاء، قد تحتاج القائمة للتحديث
                 if(reviewMode) {
                     rebuildCurrentList();
                 }
@@ -462,10 +490,9 @@
         }
         
         updateStatsUI();
+        saveToLocalStorage();
         highlightAnswerButtons(selected, isCorrect);
         enableOptions(false);
-        
-        // بدء الانتقال التلقائي
         startAutoTransition();
     }
     
@@ -519,13 +546,11 @@
         }
     }
     
-    // تحميل البيانات من Google Sheets باستخدام proxy لتجاوز CORS
+    // تحميل البيانات من Google Sheets
     async function loadFromSheetUrl(url) {
         try {
             questionTextEl.textContent = "⏳ جاري تحميل البيانات من جوجل شيت...";
-            // استخدام proxy آمن يضيف رؤوس CORS
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-            const response = await fetch(proxyUrl);
+            const response = await fetch(url);
             const csvText = await response.text();
             parseCSV(csvText);
         } catch(e) {
@@ -534,62 +559,67 @@
         }
     }
     
+    // ------------------- تعديل آلية قراءة المادة من الخانة الأخيرة -------------------
     function parseCSV(csv) {
         const lines = csv.split(/\r?\n/);
         if(lines.length < 2) {
             alert("الملف فارغ أو لا يحتوي على بيانات");
             return;
         }
+        
         const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
         const idxQuestion = headers.indexOf('question');
         const idxCorrect = headers.indexOf('correct');
-        const idxSubject = headers.indexOf('subject');
-        // البحث عن أعمدة الخيارات
+        
+        // البحث الفهرسي عن أعمدة الخيارات الثلاث المتبقية
         const idxOpts = [];
         for(let i=1; i<=3; i++) {
             let optName = `option${i}`;
             let idx = headers.indexOf(optName);
             if(idx !== -1) idxOpts.push(idx);
         }
+        
         if(idxQuestion === -1 || idxCorrect === -1) {
-            alert("يجب وجود أعمدة: 'question', 'correct' ويفضل 'subject', 'option1/2/3'");
+            alert("يجب وجود أعمدة أساسية على الأقل: 'question', 'correct'");
             return;
         }
+        
         const newCards = [];
         for(let i=1; i<lines.length; i++) {
             if(!lines[i].trim()) continue;
+            
+            // تقسيم عناصر السطر بشكل دقيق لتجنب مشاكل علامات التنصيص
             const parts = lines[i].split(',').map(p => p.trim().replace(/^"|"$/g, ''));
             if(parts.length <= idxQuestion || parts[idxQuestion] === "") continue;
+            
             let opts = [];
             for(let idx of idxOpts) {
                 if(parts[idx] && parts[idx] !== "") opts.push(parts[idx]);
             }
             while(opts.length < 3) opts.push("خيار إضافي");
-            const subject = (idxSubject !== -1 && parts[idxSubject]) ? parts[idxSubject] : "عام";
+            
+            // التحديث الجديد: أخذ العنصر الأخير في المصفوفة كاسم للمادة (لأنه يقع في الخانة الأخيرة بعد الخيار الرابع)
+            const subject = (parts.length > 0 && parts[parts.length - 1] !== "") ? parts[parts.length - 1] : "عام";
+            
             newCards.push({
-                id: `card_${i}_${Date.now()}_${Math.random()}`,
+                id: `card_row_${i}`,
                 question: parts[idxQuestion],
                 correct: parts[idxCorrect],
                 options: opts.slice(0,3),
                 subject: subject
             });
         }
+        
         if(newCards.length === 0) {
             alert("لم يتم العثور على بطاقات صالحة.");
             return;
         }
+        
         allCards = newCards;
         extractSubjects();
-        currentSubject = "الكل";
-        subjectSelect.value = "الكل";
         filterBySubject();
-        // إعادة ضبط الجلسة
-        sessionCorrect = 0;
-        sessionWrong = 0;
-        wrongSessionIds.clear();
-        reviewMode = false;
-        updateStatsUI();
-        feedbackMsgDiv.innerHTML = `✅ تم تحميل ${allCards.length} بطاقة من ${subjects.length-1} مادة (ترتيب عشوائي تلقائي)`;
+        
+        feedbackMsgDiv.innerHTML = `✅ تم استعادة الجلسة بنجاح! الإجمالي: ${allCards.length} بطاقة مخرجة.`;
     }
     
     // ربط الأحداث
@@ -611,18 +641,8 @@
         if(e.key === 'ArrowLeft') { e.preventDefault(); prevCard(); }
     });
     
-    // تسجيل Service Worker (بمسار نسبي ليتوافق مع GitHub Pages)
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                console.log('Service Worker مسجل بنجاح', reg);
-            }).catch(err => {
-                console.log('فشل تسجيل Service Worker', err);
-            });
-        });
-    }
-    
-    // بدء التطبيق
+    // بدء التطبيق المحدث
+    loadFromLocalStorage();
     loadFromSheetUrl(SHEET_URL);
 </script>
 </body>
